@@ -1,5 +1,6 @@
 import random
 import time
+from decimal import Decimal
 
 import pandas as pd
 import streamlit as st
@@ -155,12 +156,172 @@ def quick_sort(arr, key):
     return a, comps, swaps
 
 
+def heap_sort(arr, key):
+    a, comps, swaps = arr[:], 0, 0
+    n = len(a)
+
+    def sift_down(start, end):
+        nonlocal comps, swaps
+        root = start
+        while 2 * root + 1 <= end:
+            child = 2 * root + 1
+            if child + 1 <= end:
+                comps += 1
+                if key(a[child]) < key(a[child + 1]):
+                    child += 1
+            comps += 1
+            if key(a[root]) < key(a[child]):
+                a[root], a[child] = a[child], a[root]
+                swaps += 1
+                root = child
+            else:
+                return
+
+    for start in range(n // 2 - 1, -1, -1):  # build max-heap
+        sift_down(start, n - 1)
+    for end in range(n - 1, 0, -1):  # move max to the end, repair heap
+        a[0], a[end] = a[end], a[0]
+        swaps += 1
+        sift_down(0, end - 1)
+    return a, comps, swaps
+
+
+def quick_sort_hoare(arr, key):
+    # Quick Sort with Hoare partition (fewer swaps than Lomuto) + random pivot
+    a, comps, swaps = arr[:], 0, 0
+    stack = [(0, len(a) - 1)]
+    while stack:
+        low, high = stack.pop()
+        if low >= high:
+            continue
+        p = random.randint(low, high)
+        a[low], a[p] = a[p], a[low]
+        pivot = key(a[low])
+        i, j = low - 1, high + 1
+        while True:
+            i += 1
+            comps += 1
+            while key(a[i]) < pivot:
+                i += 1
+                comps += 1
+            j -= 1
+            comps += 1
+            while key(a[j]) > pivot:
+                j -= 1
+                comps += 1
+            if i >= j:
+                break
+            a[i], a[j] = a[j], a[i]
+            swaps += 1
+        stack.append((low, j))
+        stack.append((j + 1, high))
+    return a, comps, swaps
+
+
+# --- Non-comparison sorts: they need integer keys, so marks like 85.5 are scaled to 855 ---
+def to_int_keys(arr, key):
+    vals = [key(x) for x in arr]
+    decimals = 0
+    for v in vals:
+        exp = Decimal(str(v)).as_tuple().exponent
+        if exp < 0:
+            decimals = max(decimals, min(-exp, 6))
+    scale = 10 ** decimals
+    ints = [int(round(v * scale)) for v in vals]
+    return ints
+
+
+def counting_sort(arr, key):
+    n = len(arr)
+    if n == 0:
+        return [], 0, 0
+    ks = to_int_keys(arr, key)
+    lo, hi = min(ks), max(ks)
+    size = hi - lo + 1
+    if size > 5_000_000:
+        raise ValueError(f"Counting Sort needs a count array of {size:,} slots (marks range too large). "
+                         f"Use Radix, Bucket, Merge or Quick Sort instead.")
+    count = [0] * size
+    for k in ks:
+        count[k - lo] += 1
+    for i in range(1, size):  # prefix sums = final positions
+        count[i] += count[i - 1]
+    out = [None] * n
+    for idx in range(n - 1, -1, -1):  # right to left keeps it stable
+        k = ks[idx] - lo
+        count[k] -= 1
+        out[count[k]] = arr[idx]
+    return out, 0, 2 * n  # no comparisons; n count updates + n placements
+
+
+def radix_sort(arr, key):
+    n = len(arr)
+    if n == 0:
+        return [], 0, 0
+    ks = to_int_keys(arr, key)
+    lo = min(ks)
+    ks = [k - lo for k in ks]  # make all keys non-negative
+    items = list(zip(ks, arr))
+    moves, exp, max_k = 0, 1, max(ks)
+    while max_k // exp > 0:  # one stable counting pass per decimal digit (LSD)
+        count = [0] * 10
+        for k, _ in items:
+            count[(k // exp) % 10] += 1
+        for d in range(1, 10):
+            count[d] += count[d - 1]
+        out = [None] * n
+        for k, rec in reversed(items):
+            d = (k // exp) % 10
+            count[d] -= 1
+            out[count[d]] = (k, rec)
+            moves += 1
+        items = out
+        exp *= 10
+    return [rec for _, rec in items], 0, moves
+
+
+def bucket_sort(arr, key):
+    n = len(arr)
+    if n <= 1:
+        return arr[:], 0, 0
+    ks = [key(x) for x in arr]
+    lo, hi = min(ks), max(ks)
+    if lo == hi:
+        return arr[:], 0, 0
+    buckets = [[] for _ in range(n)]
+    for x, k in zip(arr, ks):
+        idx = int((k - lo) / (hi - lo) * (n - 1))
+        buckets[idx].append(x)
+    comps = moves = 0
+    result = []
+    for b in buckets:  # insertion sort inside each bucket
+        for i in range(1, len(b)):
+            cur, j = b[i], i - 1
+            while j >= 0:
+                comps += 1
+                if key(b[j]) > key(cur):
+                    b[j + 1] = b[j]
+                    moves += 1
+                    j -= 1
+                else:
+                    break
+            b[j + 1] = cur
+        result.extend(b)
+        moves += len(b)
+    return result, comps, moves
+
+
 ALGORITHMS = {
     "Bubble Sort": bubble_sort,
     "Insertion Sort": insertion_sort,
     "Selection Sort": selection_sort,
     "Merge Sort": merge_sort,
     "Quick Sort": quick_sort,
+    "Heap Sort": heap_sort,
+    "Counting Sort": counting_sort,
+    "Bucket Sort": bucket_sort,
+    "Radix Sort": radix_sort,
+    "Quick Sort (Hoare)": quick_sort_hoare,
 }
 
 INFO = {
@@ -169,6 +330,11 @@ INFO = {
     "Selection Sort": "Best O(n²) | Average O(n²) | Worst O(n²) | Space O(1) | Not stable",
     "Merge Sort": "Best O(n log n) | Average O(n log n) | Worst O(n log n) | Space O(n) | Stable",
     "Quick Sort": "Best O(n log n) | Average O(n log n) | Worst O(n²) | Space O(log n) | Not stable",
+    "Heap Sort": "Best O(n log n) | Average O(n log n) | Worst O(n log n) | Space O(1) | Not stable",
+    "Counting Sort": "Best O(n + k) | Average O(n + k) | Worst O(n + k) | Space O(n + k) | Stable (k = range of marks)",
+    "Bucket Sort": "Best O(n + k) | Average O(n + k) | Worst O(n²) | Space O(n + k) | Stable",
+    "Radix Sort": "Best O(d·(n + b)) | Average O(d·(n + b)) | Worst O(d·(n + b)) | Space O(n + b) | Stable (d = digits, b = 10)",
+    "Quick Sort (Hoare)": "Best O(n log n) | Average O(n log n) | Worst O(n²) | Space O(log n) | Not stable",
 }
 
 HOW_IT_WORKS = {
@@ -179,6 +345,15 @@ HOW_IT_WORKS = {
     "Merge Sort": "Splits the list into halves, sorts each half and merges the two sorted halves.",
     "Quick Sort": "Picks a pivot, puts smaller elements on one side and bigger ones on the other, "
                   "then repeats for both sides.",
+    "Heap Sort": "Builds a max-heap, then repeatedly moves the largest element to the end and repairs the heap.",
+    "Counting Sort": "Counts how many times each mark occurs, then uses the counts to place every student "
+                     "directly at the right position. No comparisons needed.",
+    "Bucket Sort": "Spreads students into buckets by their marks range, sorts each small bucket "
+                   "(insertion sort) and joins the buckets in order.",
+    "Radix Sort": "Sorts the marks digit by digit (ones, tens, hundreds...) using a stable counting sort "
+                  "for each digit. No comparisons needed.",
+    "Quick Sort (Hoare)": "Quick Sort variant that uses two pointers moving towards each other from both ends. "
+                          "It usually needs fewer swaps than the standard version.",
 }
 
 
@@ -283,7 +458,11 @@ if st.button(f"🚀 Run {algo_name}", type="primary", use_container_width=True):
     records = df.to_dict("records")
     key = (lambda r: -r["_marks"]) if descending else (lambda r: r["_marks"])
     t0 = time.perf_counter()
-    sorted_records, comparisons, swaps = ALGORITHMS[algo_name](records, key)
+    try:
+        sorted_records, comparisons, swaps = ALGORITHMS[algo_name](records, key)
+    except ValueError as e:
+        st.error(str(e))
+        st.stop()
     elapsed = (time.perf_counter() - t0) * 1000
     st.session_state.result = {
         "df": pd.DataFrame(sorted_records),
@@ -354,4 +533,4 @@ if res:
     with tab3:
         st.bar_chart(top.set_index("Name")["Marks"])
 
-st.caption("Sorting algorithms: Bubble | Insertion | Selection | Merge | Quick")
+st.caption("Sorting algorithms: Bubble | Insertion | Selection | Merge | Quick | Heap | Counting | Bucket | Radix | Quick (Hoare)")
