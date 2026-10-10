@@ -48,7 +48,12 @@ st.markdown(
 )
 
 
-
+# ---------------------------------------------------------------
+# SORTING ALGORITHMS
+# Har algorithm (sorted_list, comparisons, swaps) return karta hai.
+# key(x) ke hisaab se ascending sort hota hai.
+# Highest marks pehle chahiye to key = -marks, lowest pehle ke liye key = marks.
+# ---------------------------------------------------------------
 def bubble_sort(arr, key):
     a, comps, swaps = arr[:], 0, 0
     n = len(a)
@@ -60,7 +65,7 @@ def bubble_sort(arr, key):
                 a[j], a[j + 1] = a[j + 1], a[j]
                 swaps += 1
                 swapped = True
-        if not swapped:  
+        if not swapped:  # list pehle se sorted ho to ruk jao
             break
     return a, comps, swaps
 
@@ -88,7 +93,7 @@ def insertion_sort(arr, key):
         while j >= 0:
             comps += 1
             if key(a[j]) > key(current):
-                a[j + 1] = a[j]  
+                a[j + 1] = a[j]  # element ko aage shift karo
                 swaps += 1
                 j -= 1
             else:
@@ -129,7 +134,7 @@ def merge_sort(arr, key):
 
 def quick_sort(arr, key):
     a, comps, swaps = arr[:], 0, 0
-    stack = [(0, len(a) - 1)]  
+    stack = [(0, len(a) - 1)]  # recursion ki jagah stack (bare data par safe)
     while stack:
         low, high = stack.pop()
         if low >= high:
@@ -172,18 +177,16 @@ def heap_sort(arr, key):
             else:
                 return
 
-    for start in range(n // 2 - 1, -1, -1): 
+    for start in range(n // 2 - 1, -1, -1):  # build max-heap
         sift_down(start, n - 1)
-    for end in range(n - 1, 0, -1):  
+    for end in range(n - 1, 0, -1):  # move max to the end, repair heap
         a[0], a[end] = a[end], a[0]
         swaps += 1
         sift_down(0, end - 1)
     return a, comps, swaps
 
 
-
-
-
+# --- Non-comparison sorts: they need integer keys, so marks like 85.5 are scaled to 855 ---
 def to_int_keys(arr, key):
     vals = [key(x) for x in arr]
     decimals = 0
@@ -209,14 +212,14 @@ def counting_sort(arr, key):
     count = [0] * size
     for k in ks:
         count[k - lo] += 1
-    for i in range(1, size):  
+    for i in range(1, size):  # prefix sums = final positions
         count[i] += count[i - 1]
     out = [None] * n
-    for idx in range(n - 1, -1, -1): 
+    for idx in range(n - 1, -1, -1):  # right to left keeps it stable
         k = ks[idx] - lo
         count[k] -= 1
         out[count[k]] = arr[idx]
-    return out, 0, 2 * n 
+    return out, 0, 2 * n  # no comparisons; n count updates + n placements
 
 
 def radix_sort(arr, key):
@@ -225,10 +228,10 @@ def radix_sort(arr, key):
         return [], 0, 0
     ks = to_int_keys(arr, key)
     lo = min(ks)
-    ks = [k - lo for k in ks] 
+    ks = [k - lo for k in ks]  # make all keys non-negative
     items = list(zip(ks, arr))
     moves, exp, max_k = 0, 1, max(ks)
-    while max_k // exp > 0:  
+    while max_k // exp > 0:  # one stable counting pass per decimal digit (LSD)
         count = [0] * 10
         for k, _ in items:
             count[(k // exp) % 10] += 1
@@ -286,7 +289,6 @@ ALGORITHMS = {
     "Counting Sort": counting_sort,
     "Bucket Sort": bucket_sort,
     "Radix Sort": radix_sort,
-    "Quick Sort (Hoare)": quick_sort_hoare,
 }
 
 INFO = {
@@ -299,7 +301,6 @@ INFO = {
     "Counting Sort": "Best O(n + k) | Average O(n + k) | Worst O(n + k) | Space O(n + k) | Stable (k = range of marks)",
     "Bucket Sort": "Best O(n + k) | Average O(n + k) | Worst O(n²) | Space O(n + k) | Stable",
     "Radix Sort": "Best O(d·(n + b)) | Average O(d·(n + b)) | Worst O(d·(n + b)) | Space O(n + b) | Stable (d = digits, b = 10)",
-    
 }
 
 HOW_IT_WORKS = {
@@ -317,7 +318,6 @@ HOW_IT_WORKS = {
                    "(insertion sort) and joins the buckets in order.",
     "Radix Sort": "Sorts the marks digit by digit (ones, tens, hundreds...) using a stable counting sort "
                   "for each digit. No comparisons needed.",
-  
 }
 
 
@@ -395,6 +395,7 @@ st.caption(f"**{algo_name}**: {HOW_IT_WORKS[algo_name]}  |  `{INFO[algo_name]}`"
 
 df = raw.copy()
 df["_marks"] = pd.to_numeric(df[marks_col], errors="coerce")
+df["_marks"] = df["_marks"].replace([float("inf"), float("-inf")], float("nan"))  # inf marks ko invalid samjho
 invalid = int(df["_marks"].isna().sum())
 df = df.dropna(subset=["_marks"]).reset_index(drop=True)
 
@@ -497,4 +498,4 @@ if res:
     with tab3:
         st.bar_chart(top.set_index("Name")["Marks"])
 
-st.caption("Sorting algorithms: Bubble | Insertion | Selection | Merge | Quick | Heap | Counting | Bucket | Radix | Quick (Hoare)")
+st.caption("Sorting algorithms: Bubble | Insertion | Selection | Merge | Quick | Heap | Counting | Bucket | Radix")
