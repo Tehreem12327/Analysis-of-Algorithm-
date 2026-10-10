@@ -48,12 +48,7 @@ st.markdown(
 )
 
 
-# ---------------------------------------------------------------
-# SORTING ALGORITHMS
-# Har algorithm (sorted_list, comparisons, swaps) return karta hai.
-# key(x) ke hisaab se ascending sort hota hai.
-# Highest marks pehle chahiye to key = -marks, lowest pehle ke liye key = marks.
-# ---------------------------------------------------------------
+
 def bubble_sort(arr, key):
     a, comps, swaps = arr[:], 0, 0
     n = len(a)
@@ -65,7 +60,7 @@ def bubble_sort(arr, key):
                 a[j], a[j + 1] = a[j + 1], a[j]
                 swaps += 1
                 swapped = True
-        if not swapped:  # list pehle se sorted ho to ruk jao
+        if not swapped:  
             break
     return a, comps, swaps
 
@@ -93,7 +88,7 @@ def insertion_sort(arr, key):
         while j >= 0:
             comps += 1
             if key(a[j]) > key(current):
-                a[j + 1] = a[j]  # element ko aage shift karo
+                a[j + 1] = a[j]  
                 swaps += 1
                 j -= 1
             else:
@@ -134,7 +129,7 @@ def merge_sort(arr, key):
 
 def quick_sort(arr, key):
     a, comps, swaps = arr[:], 0, 0
-    stack = [(0, len(a) - 1)]  # recursion ki jagah stack (bare data par safe)
+    stack = [(0, len(a) - 1)]  
     while stack:
         low, high = stack.pop()
         if low >= high:
@@ -177,48 +172,18 @@ def heap_sort(arr, key):
             else:
                 return
 
-    for start in range(n // 2 - 1, -1, -1):  # build max-heap
+    for start in range(n // 2 - 1, -1, -1): 
         sift_down(start, n - 1)
-    for end in range(n - 1, 0, -1):  # move max to the end, repair heap
+    for end in range(n - 1, 0, -1):  
         a[0], a[end] = a[end], a[0]
         swaps += 1
         sift_down(0, end - 1)
     return a, comps, swaps
 
 
-def quick_sort_hoare(arr, key):
-    # Quick Sort with Hoare partition (fewer swaps than Lomuto) + random pivot
-    a, comps, swaps = arr[:], 0, 0
-    stack = [(0, len(a) - 1)]
-    while stack:
-        low, high = stack.pop()
-        if low >= high:
-            continue
-        p = random.randint(low, high)
-        a[low], a[p] = a[p], a[low]
-        pivot = key(a[low])
-        i, j = low - 1, high + 1
-        while True:
-            i += 1
-            comps += 1
-            while key(a[i]) < pivot:
-                i += 1
-                comps += 1
-            j -= 1
-            comps += 1
-            while key(a[j]) > pivot:
-                j -= 1
-                comps += 1
-            if i >= j:
-                break
-            a[i], a[j] = a[j], a[i]
-            swaps += 1
-        stack.append((low, j))
-        stack.append((j + 1, high))
-    return a, comps, swaps
 
 
-# --- Non-comparison sorts: they need integer keys, so marks like 85.5 are scaled to 855 ---
+
 def to_int_keys(arr, key):
     vals = [key(x) for x in arr]
     decimals = 0
@@ -244,14 +209,14 @@ def counting_sort(arr, key):
     count = [0] * size
     for k in ks:
         count[k - lo] += 1
-    for i in range(1, size):  # prefix sums = final positions
+    for i in range(1, size):  
         count[i] += count[i - 1]
     out = [None] * n
-    for idx in range(n - 1, -1, -1):  # right to left keeps it stable
+    for idx in range(n - 1, -1, -1): 
         k = ks[idx] - lo
         count[k] -= 1
         out[count[k]] = arr[idx]
-    return out, 0, 2 * n  # no comparisons; n count updates + n placements
+    return out, 0, 2 * n 
 
 
 def radix_sort(arr, key):
@@ -260,10 +225,10 @@ def radix_sort(arr, key):
         return [], 0, 0
     ks = to_int_keys(arr, key)
     lo = min(ks)
-    ks = [k - lo for k in ks]  # make all keys non-negative
+    ks = [k - lo for k in ks] 
     items = list(zip(ks, arr))
     moves, exp, max_k = 0, 1, max(ks)
-    while max_k // exp > 0:  # one stable counting pass per decimal digit (LSD)
+    while max_k // exp > 0:  
         count = [0] * 10
         for k, _ in items:
             count[(k // exp) % 10] += 1
@@ -334,7 +299,7 @@ INFO = {
     "Counting Sort": "Best O(n + k) | Average O(n + k) | Worst O(n + k) | Space O(n + k) | Stable (k = range of marks)",
     "Bucket Sort": "Best O(n + k) | Average O(n + k) | Worst O(n²) | Space O(n + k) | Stable",
     "Radix Sort": "Best O(d·(n + b)) | Average O(d·(n + b)) | Worst O(d·(n + b)) | Space O(n + b) | Stable (d = digits, b = 10)",
-    "Quick Sort (Hoare)": "Best O(n log n) | Average O(n log n) | Worst O(n²) | Space O(log n) | Not stable",
+    
 }
 
 HOW_IT_WORKS = {
@@ -352,8 +317,7 @@ HOW_IT_WORKS = {
                    "(insertion sort) and joins the buckets in order.",
     "Radix Sort": "Sorts the marks digit by digit (ones, tens, hundreds...) using a stable counting sort "
                   "for each digit. No comparisons needed.",
-    "Quick Sort (Hoare)": "Quick Sort variant that uses two pointers moving towards each other from both ends. "
-                          "It usually needs fewer swaps than the standard version.",
+  
 }
 
 
